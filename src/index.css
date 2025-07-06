@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@plugin "daisyui";
+
+
+
+
+:root {
+        
+        --color-primary: #286CFF;
+        --color-secondary: #f3f4f6;
+        --color-accent: #6B7280;
+        --color-background: #07C100;
+        --color-surface: #FFFFFF;
+        --color-muted: #6B7280;
+        --color-border: #E5E7EB;
+        --color-error: #EF4444;
+        --color-success: #10B981;
+        --color-info: #3B82F6;
+        --color-warning: #F97316;
+      }
+
+      .active{
+        background-color:#286CFF;
+        
+        color: #FFFFFF;
+       
+      }
