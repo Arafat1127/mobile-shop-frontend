@@ -22,7 +22,7 @@ const AddService = () => {
     formData.append("description", description);
     formData.append("image", image);
 
-    fetch("https://resell-mobile-shop.vercel.app/add-service", {
+    fetch("https://mobile-shop-silk.vercel.app/add-service", {
       method: "POST",
       body: formData,
     })

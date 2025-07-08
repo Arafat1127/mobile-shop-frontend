@@ -6,75 +6,50 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAngleUp } from "@fortawesome/free-solid-svg-icons";
 import { AuthContext } from "../../Context/AuthProvider";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
 const Mobile = () => {
   const { user } = useContext(AuthContext);
   const { handleAddToCart } = useContext(CartContextApi);
-  const [mobiles, setMobiles] = useState([]);
   const [selectedMobiles, setSelectedMobiles] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [bookingDetails, setBookingDetails] = useState({
-    userName: "",
-    email: "",
-    location: "",
     phoneNumber: "",
+  });
+  const {
+    data: mobiles = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["mobiles"],
+    queryFn: async () => {
+      const res = await fetch("https://mobile-shop-silk.vercel.app/mobile");
+      if (!res.ok) {
+        throw new Error("Failed to fetch mobiles");
+      }
+      return res.json();
+    },
   });
 
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(
-          "https://resell-mobile-shop.vercel.app/mobile"
-        );
-        if (!response.ok) {
-          throw new Error("Server error");
-        }
-        const data = await response.json();
-        setMobiles(data);
-      } catch (error) {
-        console.error("Primary fetch failed, trying fallback:", error);
-        try {
-          const fallbackResponse = await fetch("/mobiles.json");
-          if (!fallbackResponse.ok) {
-            throw new Error("Fallback fetch failed");
-          }
-          const fallbackData = await fallbackResponse.json();
-          setMobiles(fallbackData);
-        } catch (fallbackError) {
-          console.error("Both fetch attempts failed:", fallbackError);
-          toast.error("Failed to load data from both sources.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (error) {
+      toast.error("Failed to load mobiles. Please try again.");
+    }
+  }, [error]);
 
-    fetchData();
-  }, []);
-
-  const handleViewDetails = (mobile) => {
-    setSelectedMobiles(mobile);
-  };
-
-  const handleBackToList = () => {
-    setSelectedMobiles(null);
-  };
+  const handleViewDetails = (mobile) => setSelectedMobiles(mobile);
+  const handleBackToList = () => setSelectedMobiles(null);
 
   const handleAppointment = (event) => {
     event.preventDefault();
     const form = event.target;
-    const userName = form.name.value;
-    const email = form.email.value;
-    const phone = form.phone.value;
-
     const booking = {
-      serviceName: name,
-      name: userName,
-      email,
-      phone,
+      serviceName: selectedMobiles.name,
+      name: user?.displayName,
+      email: user?.email,
+      phone: bookingDetails.phoneNumber,
     };
 
     fetch("https://resell-mobile-shop.vercel.app/bookings", {
@@ -89,7 +64,7 @@ const Mobile = () => {
         if (data.acknowledged) {
           form.reset();
           toast.success("Booking Successfully Done!👏");
-          setTime("");
+          setShowModal(false);
           refetch();
         } else {
           toast.error(data.message);
@@ -108,41 +83,21 @@ const Mobile = () => {
     setBookingDetails({ ...bookingDetails, [name]: value });
   };
 
-  /*  Scrollbar */
+  // Scroll to Top Button
   const [isVisible, setIsVisible] = useState(false);
   const toggleVisibility = () => {
-    if (window.pageYOffset > 100) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
-    }
+    setIsVisible(window.pageYOffset > 100);
   };
-
   const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   useEffect(() => {
     window.addEventListener("scroll", toggleVisibility);
-
-    return () => {
-      window.removeEventListener("scroll", toggleVisibility);
-    };
+    return () => window.removeEventListener("scroll", toggleVisibility);
   }, []);
 
-  const [value, setValue] = useState("");
-
-  const handleChange = (e) => {
-    const inputValue = e.target.value;
-    if (/^\d*\.?\d{0,2}$/.test(inputValue)) {
-      setValue(inputValue);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
         <div className="text-center">
@@ -178,95 +133,58 @@ const Mobile = () => {
     <div className="mt-[100px] md:mt-[140px] mb-[50px] flex justify-center">
       <ToastContainer />
 
-      {selectedMobiles && (
+      {/* Single Product View */}
+      {selectedMobiles ? (
         <div className="w-full max-w-2xl bg-base-100 shadow-xl p-5">
-          <img
-            src={selectedMobiles.img}
-            alt={selectedMobiles.name}
-            className="rounded-lg mb-5"
-          />
+          <img src={selectedMobiles.img} alt={selectedMobiles.name} className="rounded-lg mb-5" />
           <h2 className="text-2xl font-bold mb-2">{selectedMobiles.name}</h2>
-          <h2 className="text-2xl font-semibold mb-3">
-            Category: {selectedMobiles.category}
-          </h2>
-          <p className="mb-2 font-semibold">
-            Details: {selectedMobiles.details}
-          </p>
-          <p className="mb-2 font-semibold">
-            Seller: {selectedMobiles.sellerName}
-          </p>
-          <p className="mb-2 font-semibold">
-            Location: {selectedMobiles.location}
-          </p>
-          <p className="mb-2 font-semibold">
-            Years of Uses: {selectedMobiles.yearsOfUse} Years
-          </p>
-          <p className="mb-2 font-semibold">
-            Original Price:{" "}
-            <span className="line-through">
-              {" "}
-              {selectedMobiles.originalPrice}.00 TK
-            </span>
+          <p className="mb-2 font-semibold">Category: {selectedMobiles.category}</p>
+          <p className="mb-2 font-semibold">Details: {selectedMobiles.details}</p>
+          <p className="mb-2 font-semibold">Seller: {selectedMobiles.sellerName}</p>
+          <p className="mb-2 font-semibold">Location: {selectedMobiles.location}</p>
+          <p className="mb-2 font-semibold">Years of Use: {selectedMobiles.yearsOfUse} Years</p>
+          <p className="mb-2 font-semibold line-through">
+            Original Price: {selectedMobiles.originalPrice}.00 TK
           </p>
           <p className="mb-4 text-primary font-bold">
             Resell Price: {selectedMobiles.resellPrice}.00 TK
           </p>
           <div className="flex gap-4">
-            <button
-              onClick={() => setShowModal(true)}
-              className="btn bg-black text-white hover:bg-red-500"
-            >
-              Book Now
-            </button>
-            <button
-              onClick={handleBackToList}
-              className="btn bg-gray-300 hover:bg-gray-400"
-            >
-              Back to List
-            </button>
+            <button onClick={() => setShowModal(true)} className="btn bg-black text-white hover:bg-red-500">Book Now</button>
+            <button onClick={handleBackToList} className="btn bg-gray-300 hover:bg-gray-400">Back to List</button>
           </div>
         </div>
-      )}
-
-      {!selectedMobiles && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4  gap-3 ">
+      ) : (
+        // Product Grid View
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {mobiles.map((mobile) => (
             <div
-              key={mobile.id}
+              key={mobile._id}
               className="rounded-md mx-0 bg-base-100 hover:shadow-2xl group relative md:w-[200px] xl:h-[450px] xl:w-[300px]"
             >
               <figure>
                 <div className="w-full relative mx-auto h-auto overflow-hidden rounded-lg">
                   <img
                     className="h-[130px] md:h-[260px] cursor-pointer w-full object-contain relative z-0 rounded-lg transition-all duration-300 hover:scale-110"
-                    src={mobile.img || notFoundImg.png}
-                    onError={(e) => {
-                      e.target.onError = null;
-                      e.target.src = "notFoundImg.png";
-                    }}
-                    alt={mobile.details ? mobile.name : ""}
+                    src={mobile.img}
+                    onError={(e) => (e.target.src = "/notFoundImg.png")}
+                    alt={mobile.name}
                   />
                 </div>
               </figure>
               <div className="flex justify-center text-center my-3">
                 <div className="max-w-xs overflow-hidden text-ellipsis px-2">
                   <h4 className="font-semibold">{mobile.name}</h4>
-
                   <p className="truncate">Seller: {mobile.sellerName}</p>
                   <p className="truncate">Location: {mobile.location}</p>
-
                   <div className="md:flex justify-center items-center xl:gap-3">
-                    <p className="font-semibold text-xl line-through text-[#969696]">
-                      TK{mobile.originalPrice}
-                    </p>
-                    <p className="font-semibold text-xl text-primary">
-                      TK {mobile.resellPrice}
-                    </p>
+                    <p className="font-semibold text-xl line-through text-[#969696]">TK {mobile.originalPrice}</p>
+                    <p className="font-semibold text-xl text-primary">TK {mobile.resellPrice}</p>
                   </div>
                   <div className="card-actions justify-center">
                     <button
                       onClick={() => handleViewDetails(mobile)}
-                      className="btn rounded-sm sm:w-[150px] md:w-[230px] lg:w-[450px] xl:w-[450px] 2xl:w-[450px] mt-3 text-[19px] xl:text-xl hover:bg-blue-500 bg-black text-white"
+                      className="btn rounded-sm sm:w-[150px] md:w-[230px] xl:w-[450px] mt-3 text-[19px] hover:bg-blue-500 bg-black text-white"
                     >
                       View Details
                     </button>
@@ -278,137 +196,46 @@ const Mobile = () => {
         </div>
       )}
 
+      {/* Booking Modal */}
       {showModal && (
         <form onSubmit={handleAppointment}>
           <div className="fixed inset-0 bg-secondary bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-8 w-full max-w-lg">
-              <h2 className="text-xl font-bold mb-4 text-center">
-                Booking Details
-              </h2>
-              <div className="mb-1">
-                <label className="block text-[15px] font-bold text-gray-700 m-1">
-                  Seller Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Your Name"
-                  className="input input-bordered w-full"
-                  readOnly
-                  value={selectedMobiles.sellerName}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="mb-1">
-                <label className="block text-[15px] font-bold text-gray-700 m-1">
-                  Product Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Your Name"
-                  className="input input-bordered w-full"
-                  readOnly
-                  value={selectedMobiles.name}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="mb-1">
-                <label className="block text-[15px] font-bold text-gray-700 m-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Your Email"
-                  className="input input-bordered w-full"
-                  value={user?.email}
-                  readOnly
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="mb-1">
-                <label
-                  for="location"
-                  className="block text-[15px] font-bold text-gray-700 m-1"
-                >
-                  Location
-                </label>
-                <input
-                  name="location"
-                  placeholder="Location"
-                  className="input input-bordered w-full"
-                  value={selectedMobiles.location}
-                  readOnly
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="mb-1">
-                <label
-                  for="name"
-                  className="block text-xl font-bold text-gray-700 m-1"
-                >
-                  Resell Price
-                </label>
+              <h2 className="text-xl font-bold mb-4 text-center">Booking Details</h2>
 
-                <span className="text-gray-500 mr-2 text-lg">TK</span>
-                <input
-                  type="text"
-                  onChange={handleChange}
-                  placeholder="Enter amount"
-                  readOnly
-                  value={selectedMobiles.resellPrice}
-                  className="flex-1 bg-transparent outline-none text-gray-700"
-                />
-              </div>
-              <div className="mb-4">
-                <label
-                  for="name"
-                  className="block text-xl font-bold text-gray-700 m-1"
-                >
-                  Mobile Number
-                </label>
-                <input
-                  type="text"
-                  name="phoneNumber"
-                  placeholder="Phone Number"
-                  className="input input-bordered w-full"
-                  value={bookingDetails.phoneNumber}
-                  onChange={handleInputChange}
-                />
-              </div>
-              <div className="flex justify-end gap-4">
+              <input readOnly value={selectedMobiles.sellerName} className="input input-bordered w-full mb-2" />
+              <input readOnly value={selectedMobiles.name} className="input input-bordered w-full mb-2" />
+              <input readOnly value={user?.email} className="input input-bordered w-full mb-2" />
+              <input readOnly value={selectedMobiles.location} className="input input-bordered w-full mb-2" />
+              <input readOnly value={`TK ${selectedMobiles.resellPrice}`} className="input input-bordered w-full mb-2" />
+              <input
+                name="phoneNumber"
+                placeholder="Phone Number"
+                className="input input-bordered w-full mb-2"
+                value={bookingDetails.phoneNumber}
+                onChange={handleInputChange}
+              />
+
+              <div className="flex justify-end gap-4 mt-4">
                 <Link to="/dashboard/my-order">
-                  <button
-                    onClick={handleBooking}
-                    className="btn bg-blue-500 text-white"
-                  >
-                    Confirm Booking
-                  </button>
+                  <button type="submit" className="btn bg-blue-500 text-white">Confirm Booking</button>
                 </Link>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="btn bg-gray-300 hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
+                <button onClick={() => setShowModal(false)} type="button" className="btn bg-gray-300 hover:bg-gray-400">Cancel</button>
               </div>
             </div>
           </div>
         </form>
       )}
 
-      <div>
-        {/* Scroll to top button */}
-        {isVisible && (
-          <button
-            onClick={scrollToTop}
-            className="flex justify-center items-center fixed bottom-12 right-12 p-3 h-[55px] object-cover w-[55px] bg-gray-300 font-bold hover:text-white  rounded-full shadow-lg hover:bg-black transition-all"
-          >
-            <FontAwesomeIcon className="w-9 h-5 font-bold" icon={faAngleUp} />
-          </button>
-        )}
-      </div>
+      {/* Scroll to Top */}
+      {isVisible && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-12 right-12 p-3 h-[55px] w-[55px] bg-gray-300 rounded-full shadow-lg hover:bg-black hover:text-white transition-all flex items-center justify-center"
+        >
+          <FontAwesomeIcon className="w-5 h-5" icon={faAngleUp} />
+        </button>
+      )}
     </div>
   );
 };

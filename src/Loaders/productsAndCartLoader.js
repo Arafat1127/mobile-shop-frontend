@@ -3,10 +3,10 @@ export const productsAndCartLoader = async () => {
   try {
 
     const [mobilesRes, laptopsRes, tvsRes, allCategoryRes] = await Promise.all([
-      fetch("https://resell-mobile-shop.vercel.app/mobile"),
-      fetch("https://resell-mobile-shop.vercel.app/laptop"),
-      fetch("https://resell-mobile-shop.vercel.app/tv"),
-      fetch("https://resell-mobile-shop.vercel.app/categories"),
+      fetch("https://mobile-shop-silk.vercel.app/mobile"),
+      fetch("https://mobile-shop-silk.vercel.app/laptop"),
+      fetch("https://mobile-shop-silk.vercel.app/tv"),
+      fetch("https://mobile-shop-silk.vercel.app/categories"),
     ]);
 
     const mobiles = await mobilesRes.json();

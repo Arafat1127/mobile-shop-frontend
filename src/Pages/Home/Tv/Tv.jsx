@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { CartContextApi } from "../../../Context/CartContext";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -10,106 +11,42 @@ import { Link } from "react-router-dom";
 const Tv = () => {
   const { handleAddToCart } = useContext(CartContextApi);
   const { user } = useContext(AuthContext);
-  const [tvs, setTv] = useState([]);
   const [selectedTv, setSelectedTv] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [bookingDetails, setBookingDetails] = useState({
-    userName: "",
-    email: "",
-    location: "",
-    phoneNumber: "",
+  const [bookingDetails, setBookingDetails] = useState({ phoneNumber: "" });
+
+  const { data: tvs = [], isLoading, isError } = useQuery({
+    queryKey: ["tvs"],
+    queryFn: async () => {
+      const res = await fetch("https://mobile-shop-silk.vercel.app/tv");
+      if (!res.ok) {
+        throw new Error("Failed to fetch TVs");
+      }
+      return res.json();
+    },
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Attempt to fetch data from the main server
-        const response = await fetch(
-          "https://resell-mobile-shop.vercel.app/tv"
-        );
-        if (!response.ok) {
-          throw new Error("Server error");
-        }
-        const data = await response.json();
-        setTv(data);
-      } catch (error) {
-        console.error("Primary fetch failed, trying fallback:", error);
-        try {
-          // Fetch data from the local JSON file as a fallback
-          const fallbackResponse = await fetch("/tvs.json");
-          if (!fallbackResponse.ok) {
-            throw new Error("Fallback fetch failed");
-          }
-          const fallbackData = await fallbackResponse.json();
-          setTv(fallbackData);
-        } catch (fallbackError) {
-          console.error("Both fetch attempts failed:", fallbackError);
-          toast.error("Failed to load data from both sources.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleViewDetails = (tv) => {
-    setSelectedTv(tv);
-  };
-
-  const handleBackToList = () => {
-    setSelectedTv(null);
-  };
-
+  const handleViewDetails = (tv) => setSelectedTv(tv);
+  const handleBackToList = () => setSelectedTv(null);
   const handleBooking = () => {
     toast.success("Booking successfully completed!");
     setShowModal(false);
     handleAddToCart(selectedTv);
   };
+  const handleInputChange = (e) =>
+    setBookingDetails({ ...bookingDetails, [e.target.name]: e.target.value });
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setBookingDetails({ ...bookingDetails, [name]: value });
-  };
-
-  /*  Scrollbar */
+  // Scroll button logic
   const [isVisible, setIsVisible] = useState(false);
-  const toggleVisibility = () => {
-    if (window.pageYOffset > 100) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
-    }
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
+  const toggleVisibility = () => setIsVisible(window.pageYOffset > 100);
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   useEffect(() => {
     window.addEventListener("scroll", toggleVisibility);
-
-    return () => {
-      window.removeEventListener("scroll", toggleVisibility);
-    };
+    return () => window.removeEventListener("scroll", toggleVisibility);
   }, []);
 
-  const [value, setValue] = useState("");
-
-  const handleChange = (e) => {
-    const inputValue = e.target.value;
-    if (/^\d*\.?\d{0,2}$/.test(inputValue)) {
-      setValue(inputValue);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
         <div className="text-center">
@@ -134,9 +71,18 @@ const Tv = () => {
             ></path>
           </svg>
           <p className="mt-2 text-lg font-semibold text-gray-700">
-            Loading Tv, please wait...
+            Loading TVs, please wait...
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    toast.error("Failed to load TVs from server.");
+    return (
+      <div className="text-center mt-20 text-red-500 font-semibold text-xl">
+        Failed to load TVs. Please try again later.
       </div>
     );
   }
@@ -145,238 +91,93 @@ const Tv = () => {
     <div className="mt-[100px] md:mt-[140px] mb-[50px] flex justify-center">
       <ToastContainer />
 
-      {selectedTv && (
+      {selectedTv ? (
         <div className="w-full max-w-2xl bg-base-100 shadow-xl p-5">
-          <img
-            src={selectedTv.img}
-            alt={selectedTv.name}
-            className="rounded-lg mb-5"
-          />
+          <img src={selectedTv.img} alt={selectedTv.name} className="rounded-lg mb-5" />
           <h2 className="text-2xl font-bold mb-2">{selectedTv.name}</h2>
-          <h2 className="text-2xl font-semibold mb-3">
-            Category: {selectedTv.category}
-          </h2>
+          <h2 className="text-2xl font-semibold mb-3">Category: {selectedTv.category}</h2>
           <p className="mb-2 font-semibold">Details: {selectedTv.details}</p>
           <p className="mb-2 font-semibold">Seller: {selectedTv.sellerName}</p>
           <p className="mb-2 font-semibold">Location: {selectedTv.location}</p>
+          <p className="mb-2 font-semibold">Years of Use: {selectedTv.yearsOfUse} Years</p>
           <p className="mb-2 font-semibold">
-            Years of Uses: {selectedTv.yearsOfUse} Years
+            Original Price: <span className="line-through">{selectedTv.originalPrice} TK</span>
           </p>
-          <p className="mb-2 font-semibold">
-            Original Price:{" "}
-            <span className="line-through">
-              {" "}
-              {selectedTv.originalPrice}.00 TK
-            </span>
-          </p>
-          <p className="mb-4 text-primary font-bold">
-            Resell Price: {selectedTv.resellPrice}.00 TK
-          </p>
+          <p className="mb-4 text-primary font-bold">Resell Price: {selectedTv.resellPrice} TK</p>
           <div className="flex gap-4">
-            <button
-              onClick={() => setShowModal(true)}
-              className="btn bg-black text-white hover:bg-red-500"
-            >
-              Book Now
-            </button>
-            <button
-              onClick={handleBackToList}
-              className="btn bg-gray-300 hover:bg-gray-400"
-            >
-              Back to List
-            </button>
+            <button onClick={() => setShowModal(true)} className="btn bg-black text-white hover:bg-red-500">Book Now</button>
+            <button onClick={handleBackToList} className="btn bg-gray-300 hover:bg-gray-400">Back to List</button>
           </div>
         </div>
-      )}
-
-      {!selectedTv && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4  gap-3 ">
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {tvs.map((tv) => (
-            <div
-              key={tv.id}
-              className="rounded-md mx-0 bg-base-100 hover:shadow-2xl group relative md:w-[200px] xl:h-[450px] xl:w-[300px]"
-            >
+            <div key={tv.id} className="rounded-md bg-base-100 hover:shadow-2xl group relative md:w-[200px] xl:h-[450px] xl:w-[300px]">
               <figure>
-                <div className="w-full relative mx-auto h-auto overflow-hidden rounded-lg">
+                <div className="w-full h-auto overflow-hidden rounded-lg">
                   <img
-                    className="h-[130px] md:h-[260px] cursor-pointer w-full object-contain relative z-0 rounded-lg transition-all duration-300 hover:scale-110"
                     src={tv.img}
-                    onError={(e) => {
-                      e.target.onError = null;
-                      e.target.src = notFoundImg.png;
-                    }}
-                    alt={tv.details ? tv.name : ""}
+                    alt={tv.name}
+                    className="h-[130px] md:h-[260px] w-full object-contain transition-all duration-300 hover:scale-110"
                   />
                 </div>
               </figure>
-              <div className="flex justify-center text-center my-3">
-                <div className="max-w-xs overflow-hidden text-ellipsis px-2">
-                  <h4 className="font-semibold py-2 truncate">{tv.name}</h4>
-
-                  <p className=" truncate">Seller: {tv.sellerName}</p>
-                  <p className="truncate">Location: {tv.location}</p>
-
-                  <div className="md:flex justify-center items-center xl:gap-3">
-                    <p className="font-semibold text-xl line-through text-[#969696]">
-                      TK{tv.originalPrice}
-                    </p>
-                    <p className="font-semibold text-xl text-primary">
-                      TK{tv.resellPrice}
-                    </p>
-                  </div>
-                  <div className="card-actions justify-center">
-                    <button
-                      onClick={() => handleViewDetails(tv)}
-                      className="btn rounded-sm sm:w-[150px] md:w-[230px] lg:w-[450px] xl:w-[450px] 2xl:w-[450px] mt-3 text-[19px] xl:text-xl hover:bg-blue-500 bg-black text-white"
-                    >
-                      View Details
-                    </button>
-                  </div>
+              <div className="flex flex-col items-center text-center p-3">
+                <h4 className="font-semibold truncate">{tv.name}</h4>
+                <p className="truncate">Seller: {tv.sellerName}</p>
+                <p className="truncate">Location: {tv.location}</p>
+                <div className="flex gap-2 justify-center items-center">
+                  <p className="text-xl line-through text-gray-500">TK{tv.originalPrice}</p>
+                  <p className="text-xl text-primary font-semibold">TK{tv.resellPrice}</p>
                 </div>
+                <button
+                  onClick={() => handleViewDetails(tv)}
+                  className="btn mt-2 w-full bg-black text-white hover:bg-blue-500"
+                >
+                  View Details
+                </button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {showModal && (
-        <div className="fixed inset-0 bg-secondary bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 w-full max-w-lg">
-            <h2 className="text-xl font-bold mb-4 text-center">
-              Booking Details
-            </h2>
-            <div className="mb-1">
-              <label
-                for="name"
-                className="block text-[15px] font-bold text-gray-700 m-1"
-              >
-                Seller Name
-              </label>
-              <input
-                type="text"
-                name="name"
-                placeholder="Your Name"
-                className="input input-bordered w-full"
-                readOnly
-                value={selectedTv.sellerName}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="mb-1">
-              <label
-                for="name"
-                className="block text-[15px] font-bold text-gray-700 m-1"
-              >
-                Product Name
-              </label>
-              <input
-                type="text"
-                name="name"
-                placeholder="Your Name"
-                className="input input-bordered w-full"
-                readOnly
-                value={selectedTv.name}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="mb-1">
-              <label
-                for="name"
-                className="block text-[15px] font-bold text-gray-700 m-1"
-              >
-                Email Address
-              </label>
-              <input
-                type="email"
-                name="email"
-                placeholder="Your Email"
-                className="input input-bordered w-full"
-                value={user?.email}
-                readOnly
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="mb-1">
-              <label
-                for="location"
-                className="block text-[15px] font-bold text-gray-700 m-1"
-              >
-                Location
-              </label>
-              <input
-                name="location"
-                placeholder="Location"
-                className="input input-bordered w-full"
-                value={selectedTv.location}
-                readOnly
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="mb-1">
-              <label
-                for="name"
-                className="block text-xl font-bold text-gray-700 m-1"
-              >
-                Resell Price
-              </label>
-
-              <span className="text-gray-500 mr-2 text-lg">TK</span>
-              <input
-                type="text"
-                onChange={handleChange}
-                placeholder="Enter amount"
-                readOnly
-                value={selectedTv.resellPrice}
-                className="flex-1 bg-transparent outline-none text-gray-700"
-              />
-            </div>
-            <div className="mb-4">
-              <label
-                for="name"
-                className="block text-xl font-bold text-gray-700 m-1"
-              >
-                Mobile Number
-              </label>
-              <input
-                type="text"
-                name="phoneNumber"
-                placeholder="Phone Number"
-                className="input input-bordered w-full"
-                value={selectedTv.phoneNumber}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div className="flex justify-end gap-4">
+      {/* Booking Modal */}
+      {showModal && selectedTv && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4 text-center">Booking Details</h2>
+            <input type="text" className="input input-bordered w-full mb-2" value={selectedTv.sellerName} readOnly />
+            <input type="text" className="input input-bordered w-full mb-2" value={selectedTv.name} readOnly />
+            <input type="email" className="input input-bordered w-full mb-2" value={user?.email} readOnly />
+            <input type="text" className="input input-bordered w-full mb-2" value={selectedTv.location} readOnly />
+            <input type="text" className="input input-bordered w-full mb-2" value={`TK ${selectedTv.resellPrice}`} readOnly />
+            <input
+              type="text"
+              name="phoneNumber"
+              placeholder="Phone Number"
+              className="input input-bordered w-full mb-4"
+              value={bookingDetails.phoneNumber}
+              onChange={handleInputChange}
+            />
+            <div className="flex justify-end gap-3">
               <Link to="/dashboard/my-order">
-                <button
-                  onClick={handleBooking}
-                  className="btn bg-blue-500 text-white"
-                >
-                  Confirm Booking
-                </button>
+                <button onClick={handleBooking} className="btn bg-blue-500 text-white">Confirm Booking</button>
               </Link>
-              <button
-                onClick={() => setShowModal(false)}
-                className="btn bg-gray-300 hover:bg-gray-400"
-              >
-                Cancel
-              </button>
+              <button onClick={() => setShowModal(false)} className="btn bg-gray-300">Cancel</button>
             </div>
           </div>
         </div>
       )}
 
-      <div>
-        {/* Scroll to top button */}
-        {isVisible && (
-          <button
-            onClick={scrollToTop}
-            className="flex justify-center items-center fixed bottom-12 right-12 p-3 h-[55px] object-cover w-[55px] bg-gray-300 font-bold hover:text-white  rounded-full shadow-lg hover:bg-black transition-all"
-          >
-            <FontAwesomeIcon className="w-9 h-5 font-bold" icon={faAngleUp} />
-          </button>
-        )}
-      </div>
+      {isVisible && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-12 right-12 p-3 h-[55px] w-[55px] bg-gray-300 hover:bg-black text-white rounded-full shadow-lg transition-all"
+        >
+          <FontAwesomeIcon icon={faAngleUp} />
+        </button>
+      )}
     </div>
   );
 };

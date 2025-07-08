@@ -11,14 +11,14 @@ const AllUsers = () => {
   } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const res = await fetch("https://resell-mobile-shop.vercel.app/users");
+      const res = await fetch("https://mobile-shop-silk.vercel.app/users");
       const data = await res.json();
       return data;
     },
   });
 
   const handleMakeAdmin = (id) => {
-    fetch(`https://resell-mobile-shop.vercel.app/users/admin/${id}`, {
+    fetch(`https://mobile-shop-silk.vercel.app/users/admin/${id}`, {
       method: "PUT",
     })
       .then((res) => res.json())

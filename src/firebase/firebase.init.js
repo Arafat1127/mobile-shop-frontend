@@ -1,12 +1,13 @@
 import { initializeApp } from "firebase/app";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBVhpM-cogF777R_zBjaN6kWAt0I5JY-Vc",
-  authDomain: "mobile-shop-1-3d008.firebaseapp.com",
-  projectId: "mobile-shop-1-3d008",
-  storageBucket: "mobile-shop-1-3d008.firebasestorage.app",
-  messagingSenderId: "593080662509",
-  appId: "1:593080662509:web:56a1e6cd4412c446e08fe4"
+    apiKey: "AIzaSyAGabyfkqm3OohxTXWvJLmJAoBd9EYr3A8",
+    authDomain: "mobile-shop-8a542.firebaseapp.com",
+    projectId: "mobile-shop-8a542",
+    storageBucket: "mobile-shop-8a542.firebasestorage.app",
+    messagingSenderId: "10798265745",
+    appId: "1:10798265745:web:49daba6cfd577f90dd5630"
 };
+
 
 export const app = initializeApp(firebaseConfig);

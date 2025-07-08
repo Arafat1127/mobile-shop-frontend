@@ -1,67 +1,31 @@
-import React, { useContext, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useContext, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { CartContextApi } from "../../../Context/CartContext";
 import { AuthContext } from "../../../Context/AuthProvider";
+import { Link } from "react-router-dom";
 
 const AllCategories = () => {
   const { handleAddToCart } = useContext(CartContextApi);
-  const [categories, setCategories] = useState([]);
   const { user } = useContext(AuthContext);
   const [selectedCategories, setSelectedCategories] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [loading, setLoading] = useState(true); // Added loading state
   const [bookingDetails, setBookingDetails] = useState({
-    userName: "",
-    email: "",
-    location: "",
     phoneNumber: "",
   });
 
+  const { data: categories = [], isLoading, isError } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const res = await fetch("https://mobile-shop-silk.vercel.app/categories");
+      if (!res.ok) throw new Error("Failed to fetch categories");
+      return res.json();
+    },
+  });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Attempt to fetch data from the main server
-        const response = await fetch(
-          "https://resell-mobile-shop.vercel.app/categories"
-        );
-        if (!response.ok) {
-          throw new Error("Server error");
-        }
-        const data = await response.json();
-        setCategories(data);
-      } catch (error) {
-        console.error("Primary fetch failed, trying fallback:", error);
-        try {
-          // Fetch data from the local JSON file as a fallback
-          const fallbackResponse = await fetch("/categories.json");
-          if (!fallbackResponse.ok) {
-            throw new Error("Fallback fetch failed");
-          }
-          const fallbackData = await fallbackResponse.json();
-          setCategories(fallbackData);
-        } catch (fallbackError) {
-          console.error("Both fetch attempts failed:", fallbackError);
-          toast.error("Failed to load data from both sources.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleViewDetails = (category) => {
-    setSelectedCategories(category);
-  };
-
-  const handleBackToList = () => {
-    setSelectedCategories(null);
-  };
+  const handleViewDetails = (category) => setSelectedCategories(category);
+  const handleBackToList = () => setSelectedCategories(null);
 
   const handleBooking = () => {
     toast.success("Booking successfully completed!");
@@ -71,19 +35,10 @@ const AllCategories = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setBookingDetails({ ...bookingDetails, [name]: value });
+    setBookingDetails((prev) => ({ ...prev, [name]: value }));
   };
 
-  const [value, setValue] = useState("");
-
-  const handleChange = (e) => {
-    const inputValue = e.target.value;
-    if (/^\d*\.?\d{0,2}$/.test(inputValue)) {
-      setValue(inputValue);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
         <div className="text-center">
@@ -107,18 +62,25 @@ const AllCategories = () => {
               d="M4 12a8 8 0 018-8V0C4.477 0 0 4.477 0 12h4zm2 5.291A7.97 7.97 0 014 12H0c0 3.161 1.035 6.078 2.766 8.435l3.234-3.144z"
             ></path>
           </svg>
-          <p className="mt-2 text-lg font-semibold text-gray-700">
-            Loading categories, please wait...
-          </p>
+          <p className="mt-2 text-lg font-semibold text-gray-700">Loading categories...</p>
         </div>
       </div>
     );
   }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-screen text-red-500">
+        Failed to load categories.
+      </div>
+    );
+  }
+
   return (
     <div className="mt-[100px] md:mt-[140px] mb-[50px] flex justify-center">
       <ToastContainer />
-
-      {selectedCategories && (
+      {selectedCategories ? (
+        // DETAILS VIEW
         <div className="w-full max-w-2xl bg-base-100 shadow-xl p-5">
           <img
             src={selectedCategories.img}
@@ -129,193 +91,117 @@ const AllCategories = () => {
           <h2 className="text-2xl font-semibold mb-3">
             Category: {selectedCategories.category}
           </h2>
+          <p className="mb-2 font-semibold">Details: {selectedCategories.details}</p>
+          <p className="mb-2 font-semibold">Seller: {selectedCategories.sellerName}</p>
+          <p className="mb-2 font-semibold">Location: {selectedCategories.location}</p>
+          <p className="mb-2 font-semibold">Years of Uses: {selectedCategories.yearsOfUse} Years</p>
           <p className="mb-2 font-semibold">
-            Details: {selectedCategories.details}
-          </p>
-          <p className="mb-2 font-semibold">
-            Seller: {selectedCategories.sellerName}
-          </p>
-          <p className="mb-2 font-semibold">
-            Location: {selectedCategories.location}
-          </p>
-          <p className="mb-2 font-semibold">
-            Years of Uses: {selectedCategories.yearsOfUse} Years
-          </p>
-          <p className="mb-2 font-semibold">
-            Original Price:{" "}
-            <span className="line-through">
-              {" "}
-              {selectedCategories.originalPrice}.00 TK
-            </span>
+            Original Price: <span className="line-through">{selectedCategories.originalPrice} TK</span>
           </p>
           <p className="mb-4 text-primary font-bold">
-            Resell Price: {selectedCategories.resellPrice}.00 TK
+            Resell Price: {selectedCategories.resellPrice} TK
           </p>
           <div className="flex gap-4">
-            <button
-              onClick={() => setShowModal(true)}
-              className="btn bg-black text-white hover:bg-red-500"
-            >
+            <button onClick={() => setShowModal(true)} className="btn bg-black text-white hover:bg-red-500">
               Book Now
             </button>
-            <button
-              onClick={handleBackToList}
-              className="btn bg-gray-300 hover:bg-gray-400"
-            >
+            <button onClick={handleBackToList} className="btn bg-gray-300 hover:bg-gray-400">
               Back to List
             </button>
           </div>
         </div>
-      )}
-
-      {!selectedCategories && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4  gap-3 ">
+      ) : (
+        // CATEGORY LIST VIEW
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           {categories.map((category) => (
             <div
               key={category.id}
-              className="rounded-md mx-0 bg-base-100 hover:shadow-2xl group relative md:w-[200px] xl:h-[450px] xl:w-[300px]"
+              className="rounded-md bg-base-100 hover:shadow-2xl group relative md:w-[200px] xl:h-[450px] xl:w-[300px]"
             >
               <figure>
-                <div className="w-full relative mx-auto h-auto overflow-hidden rounded-lg">
+                <div className="w-full h-auto overflow-hidden rounded-lg">
                   <img
-                    className="h-[130px] md:h-[260px] cursor-pointer w-full object-contain relative z-0 rounded-lg transition-all duration-300 hover:scale-110"
+                    className="h-[130px] md:h-[260px] w-full object-contain cursor-pointer transition-all duration-300 hover:scale-110"
                     src={category.img}
-                    onError={(e) => {
-                      e.target.onError = null;
-                      e.target.src = notFoundImg.png;
-                    }}
-                    alt={category.details ? category.name : ""}
+                    alt={category.name}
                   />
                 </div>
               </figure>
-              <div className="flex justify-center text-center my-3">
-                <div className="max-w-xs overflow-hidden text-ellipsis px-2">
-                  <h4 className="font-semibold">{category.name}</h4>
-
-                  <p className="truncate">Seller: {category.sellerName}</p>
-                  <p className="truncate">Location: {category.location}</p>
-
-                  <div className="md:flex justify-center items-center xl:gap-3">
-                    <p className="font-semibold text-xl line-through text-[#969696]">
-                      TK{category.originalPrice}
-                    </p>
-                    <p className="font-semibold text-xl text-primary">
-                      TK{category.resellPrice}
-                    </p>
-                  </div>
-                  <div className="card-actions justify-center">
-                    <button
-                      onClick={() => handleViewDetails(category)}
-                      className="btn rounded-sm sm:w-[150px] md:w-[230px] lg:w-[450px] xl:w-[450px] 2xl:w-[450px] mt-3 text-[19px] xl:text-xl hover:bg-blue-500 bg-black text-white"
-                    >
-                      View Details
-                    </button>
-                  </div>
+              <div className="text-center my-3 px-2">
+                <h4 className="font-semibold">{category.name}</h4>
+                <p>Seller: {category.sellerName}</p>
+                <p>Location: {category.location}</p>
+                <div className="md:flex justify-center gap-3">
+                  <p className="font-semibold text-xl line-through text-[#969696]">
+                    TK{category.originalPrice}
+                  </p>
+                  <p className="font-semibold text-xl text-primary">
+                    TK{category.resellPrice}
+                  </p>
                 </div>
+                <button
+                  onClick={() => handleViewDetails(category)}
+                  className="btn mt-3 w-full hover:bg-blue-500 bg-black text-white"
+                >
+                  View Details
+                </button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {showModal && (
+      {/* MODAL */}
+      {showModal && selectedCategories && (
         <div className="fixed inset-0 bg-secondary bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 w-full max-w-lg">
-            <h2 className="text-xl font-bold mb-4 text-center">
-              Booking Details
-            </h2>
-            <div className="mb-1">
-              <label
-                for="name"
-                className="block text-[15px] font-bold text-gray-700 m-1"
-              >
-                Seller Name
-              </label>
+            <h2 className="text-xl font-bold mb-4 text-center">Booking Details</h2>
+            <div className="mb-2">
+              <label className="block font-bold text-gray-700">Seller Name</label>
               <input
                 type="text"
-                name="name"
-                placeholder="Your Name"
                 className="input input-bordered w-full"
                 readOnly
                 value={selectedCategories.sellerName}
-                onChange={handleInputChange}
               />
             </div>
-            <div className="mb-1">
-              <label
-                for="name"
-                className="block text-[15px] font-bold text-gray-700 m-1"
-              >
-                Product Name
-              </label>
+            <div className="mb-2">
+              <label className="block font-bold text-gray-700">Product Name</label>
               <input
                 type="text"
-                name="name"
-                placeholder="Your Name"
                 className="input input-bordered w-full"
                 readOnly
                 value={selectedCategories.name}
-                onChange={handleInputChange}
               />
             </div>
-            <div className="mb-1">
-              <label
-                for="name"
-                className="block text-[15px] font-bold text-gray-700 m-1"
-              >
-                Email Address
-              </label>
+            <div className="mb-2">
+              <label className="block font-bold text-gray-700">Email Address</label>
               <input
                 type="email"
-                name="email"
-                placeholder="Your Email"
                 className="input input-bordered w-full"
-                value={user?.email}
                 readOnly
-                onChange={handleInputChange}
+                value={user?.email || ""}
               />
             </div>
-            <div className="mb-1">
-              <label
-                for="location"
-                className="block text-[15px] font-bold text-gray-700 m-1"
-              >
-                Location
-              </label>
+            <div className="mb-2">
+              <label className="block font-bold text-gray-700">Location</label>
               <input
-                name="location"
-                placeholder="Location"
                 className="input input-bordered w-full"
-                value={selectedCategories.location}
                 readOnly
-                onChange={handleInputChange}
+                value={selectedCategories.location}
               />
             </div>
-            <div className="mb-1">
-              <label
-                for="name"
-                className="block text-xl font-bold text-gray-700 m-1"
-              >
-                Resell Price
-              </label>
-
-              <span className="text-gray-500 mr-2 text-lg">TK</span>
+            <div className="mb-2">
+              <label className="block font-bold text-gray-700">Resell Price (TK)</label>
               <input
                 type="text"
-                onChange={handleChange}
-                placeholder="Enter amount"
                 readOnly
                 value={selectedCategories.resellPrice}
-                className="flex-1 bg-transparent outline-none text-gray-700"
+                className="input input-bordered w-full"
               />
             </div>
             <div className="mb-4">
-              <label
-                for="name"
-                className="block text-xl font-bold text-gray-700 m-1"
-              >
-                Mobile Number
-              </label>
+              <label className="block font-bold text-gray-700">Mobile Number</label>
               <input
                 type="text"
                 name="phoneNumber"
@@ -327,10 +213,7 @@ const AllCategories = () => {
             </div>
             <div className="flex justify-end gap-4">
               <Link to="/dashboard/my-order">
-                <button
-                  onClick={handleBooking}
-                  className="btn bg-blue-500 text-white"
-                >
+                <button onClick={handleBooking} className="btn bg-blue-500 text-white">
                   Confirm Booking
                 </button>
               </Link>

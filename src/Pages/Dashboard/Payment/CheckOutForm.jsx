@@ -16,7 +16,7 @@ const CheckOutForm = ({ product }) => {
 
   useEffect(() => {
     // Create PaymentIntent as soon as the page loads
-    fetch("https://resell-mobile-shop.vercel.app/create-payment-intent", {
+    fetch("https://mobile-shop-silk.vercel.app/create-payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ amount: product.resellPrice }), // Send price dynamically
@@ -72,7 +72,7 @@ const CheckOutForm = ({ product }) => {
         email: user?.email,
         bookingId: _id,
       };
-      fetch("https://resell-mobile-shop.vercel.app/payments", {
+      fetch("https://mobile-shop-silk.vercel.app/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payment),

@@ -6,25 +6,22 @@ import { AuthContext } from "../../Context/AuthProvider";
 import toast from "react-hot-toast";
 
 const SignUp = () => {
-  const { continueWithGoogle } = useContext(AuthContext);
+  const { continueWithGoogle, createUser, updateUser } = useContext(AuthContext);
+  const navigate = useNavigate();
 
-  const { createUser, updateUser } = useContext(AuthContext);
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
   } = useForm();
-  const navigate = useNavigate();
 
   const savedUsers = (name, email) => {
     const user = { name, email };
 
-    fetch("https://mobile-shop-eta-liard.vercel.app/users/users", {
+    fetch("https://mobile-shop-silk.vercel.app/users/users", {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify(user),
     })
       .then((res) => res.json())
@@ -39,10 +36,7 @@ const SignUp = () => {
     createUser(data.email, data.password)
       .then((result) => {
         const user = result.user;
-
-        const userInfo = {
-          displayName: data.name,
-        };
+        const userInfo = { displayName: data.name };
 
         savedUsers(data.name, data.email);
 
@@ -50,24 +44,24 @@ const SignUp = () => {
           .then(() => {
             navigate("/");
           })
-          .catch((err) => {
-            console.log(err);
-          });
+          .catch((err) => console.log(err));
       })
       .catch((error) => {
-        if (error.message === "Firebase: Error (auth/email-already-in-use).")
-          toast.error("Email Already in Used");
+        if (error.message === "Firebase: Error (auth/email-already-in-use).") {
+          toast.error("Email Already in Use");
+        } else {
+          toast.error("Something went wrong");
+        }
       });
   };
 
   const googleSignIn = () => {
     continueWithGoogle()
       .then((result) => {
-        const user = result.user;
-        if (user) {
+        if (result.user) {
           toast.success("Google login Successfully Done");
+          navigate("/");
         }
-        navigate("/");
       })
       .catch((error) => {
         toast.error(error.message);
@@ -75,84 +69,83 @@ const SignUp = () => {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen">
-      <div>
-        <h1 className="text-5xl font-semibold text-primary mb-5 text-center">
-          Sign Up Now
-        </h1>
-        <div className="card bg-base-100 w-96 shrink-0 shadow-2xl">
+    <div className="flex justify-center items-center min-h-screen bg-gray-50 px-4">
+      <div className="w-full max-w-md">
+        <h1 className="text-4xl font-semibold text-center text-primary mb-6">Sign Up Now</h1>
+        <div className="card bg-white w-full shadow-xl rounded-lg">
           <div className="card-body">
-            <form onSubmit={handleSubmit(handleSignUp)} className="fieldset">
-              <label className="label">Name</label>
-              <input
-                type="text"
-                {...register("name", {
-                  required: "Name is required",
-                })}
-                className="input"
-                placeholder="Name"
-              />
-
-              {errors.name && (
-                <p className="text-red-500">{errors.name.message}</p>
-              )}
-
-              <label className="label">Email</label>
-              <input
-                type="email"
-                {...register("email", {
-                  required: "Email is required",
-                })}
-                className="input"
-                placeholder="Email"
-              />
-              {errors.email && (
-                <p className="text-red-500">{errors.email.message}</p>
-              )}
-              <label className="label">Password</label>
-              <input
-                {...register("password", {
-                  required: "Password is required",
-
-                  minLength: {
-                    value: 6,
-                    message: "Password must be 6 character or more",
-                  },
-                  pattern: {
-                    value:
-                      /(?=.*?[A-Z])(?=.*?[a-z])(?=.*[!#$@%^&])(?=.*?[0-9])/,
-                    message:
-                      "password must have at Least one uppercase letter,one lowercase letter,one special character and one number",
-                  },
-                })}
-                type="password"
-                className="input"
-                placeholder="Password"
-              />
-              {errors.password && (
-                <p className="text-red-500">{errors.password.message}</p>
-              )}
+            <form onSubmit={handleSubmit(handleSignUp)} className="space-y-3">
+              {/* Name */}
               <div>
-                <a className="link link-hover">
-                  Already Have an Account?
-                  <Link className="text-primary" to="/sign-in">
-                    Please Log in
-                  </Link>
-                </a>
+                <label className="label font-semibold">Name</label>
+                <input
+                  type="text"
+                  {...register("name", { required: "Name is required" })}
+                  className="input input-bordered w-full"
+                  placeholder="Your Name"
+                />
+                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
               </div>
+
+              {/* Email */}
+              <div>
+                <label className="label font-semibold">Email</label>
+                <input
+                  type="email"
+                  {...register("email", { required: "Email is required" })}
+                  className="input input-bordered w-full"
+                  placeholder="Your Email"
+                />
+                {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="label font-semibold">Password</label>
+                <input
+                  type="password"
+                  {...register("password", {
+                    required: "Password is required",
+                    minLength: {
+                      value: 6,
+                      message: "Password must be 6 characters or more",
+                    },
+                    pattern: {
+                      value: /(?=.*?[A-Z])(?=.*?[a-z])(?=.*[!#$@%^&])(?=.*?[0-9])/,
+                      message:
+                        "Must include uppercase, lowercase, number, and special character",
+                    },
+                  })}
+                  className="input input-bordered w-full"
+                  placeholder="Password"
+                />
+                {errors.password && (
+                  <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+                )}
+              </div>
+
+              <div className="text-sm">
+                Already have an account?{" "}
+                <Link to="/sign-in" className="text-primary hover:underline font-medium">
+                  Login here
+                </Link>
+              </div>
+
               <input
                 type="submit"
                 value="Sign Up"
-                className="btn btn-primary mt-4 text-white"
+                className="btn btn-primary w-full text-white"
               />
             </form>
 
+            <div className="divider my-4">or</div>
+
             <button
               onClick={googleSignIn}
-              className="btn btn-primary mt-4 text-white"
+              className="btn w-full bg-white text-black border border-gray-300 hover:bg-gray-100 flex justify-center items-center gap-3"
             >
-              <img className="w-8 h-8" src={google} alt="google" />
-              Continue With Google
+              <img className="w-6 h-6" src={google} alt="google" />
+              Continue with Google
             </button>
           </div>
         </div>
